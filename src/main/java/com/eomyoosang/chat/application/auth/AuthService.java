@@ -110,8 +110,16 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // UserDetails를 직접 생성하고 Authentication 객체 만들기
+        org.springframework.security.core.userdetails.UserDetails userDetails =
+            org.springframework.security.core.userdetails.User.builder()
+                .username(user.getId())
+                .password("")  // 토큰 갱신시에는 비밀번호 불필요
+                .authorities("USER")
+                .build();
+
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userId, null, null
+                userDetails, null, userDetails.getAuthorities()
         );
 
         String newAccessToken = tokenProvider.generateAccessToken(authentication);
