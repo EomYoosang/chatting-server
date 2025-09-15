@@ -1,7 +1,10 @@
 package com.eomyoosang.chat.application.user;
 
+import com.eomyoosang.chat.domain.shared.exception.ErrorCode;
 import com.eomyoosang.chat.domain.user.entity.Friend;
 import com.eomyoosang.chat.domain.user.entity.User;
+import com.eomyoosang.chat.domain.user.exception.FriendException;
+import com.eomyoosang.chat.domain.user.exception.UserException;
 import com.eomyoosang.chat.domain.user.repository.FriendRepository;
 import com.eomyoosang.chat.domain.user.repository.UserRepository;
 import com.eomyoosang.chat.presentation.user.dto.AddFriendRequest;
@@ -86,24 +89,24 @@ public class FriendService {
                 .map(User::getEmail)
                 .filter(email -> email.equals(request.getEmail()))
                 .isPresent())) {
-            throw new RuntimeException("Cannot add yourself as friend");
+            throw new UserException.CannotAddYourselfAsFriendException();
         }
 
         // 친구로 추가할 사용자 찾기
         User friendUser;
         if (request.getFriendId() != null) {
             friendUser = userRepository.findById(request.getFriendId())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new UserException.UserNotFoundException());
         } else if (request.getEmail() != null) {
             friendUser = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new UserException.UserNotFoundException());
         } else {
-            throw new RuntimeException("Friend ID or email is required");
+            throw new UserException(ErrorCode.INVALID_REQUEST, "Friend ID or email is required");
         }
 
         // 이미 친구인지 확인
         if (friendRepository.existsByUserIdAndFriendId(userId, friendUser.getId())) {
-            throw new RuntimeException("Already friends");
+            throw new FriendException.AlreadyFriendsException();
         }
 
         // 양방향 친구 관계 생성
@@ -119,10 +122,10 @@ public class FriendService {
     @Transactional
     public FriendDto updateFriendStatus(String userId, String friendId, Friend.FriendStatus status) {
         Friend friend = friendRepository.findByUserIdAndFriendId(userId, friendId)
-                .orElseThrow(() -> new RuntimeException("Friend relationship not found"));
+                .orElseThrow(() -> new FriendException.FriendRelationshipNotFoundException());
 
         User friendUser = userRepository.findById(friendId)
-                .orElseThrow(() -> new RuntimeException("Friend not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         if (status == Friend.FriendStatus.BLOCKED) {
             friend.block();
@@ -137,7 +140,7 @@ public class FriendService {
     @Transactional
     public void deleteFriend(String userId, String friendId) {
         if (!friendRepository.existsByUserIdAndFriendId(userId, friendId)) {
-            throw new RuntimeException("Friend relationship not found");
+            throw new FriendException.FriendRelationshipNotFoundException();
         }
 
         // 양방향 친구 관계 삭제

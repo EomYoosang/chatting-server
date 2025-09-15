@@ -2,6 +2,8 @@ package com.eomyoosang.chat.application.auth;
 
 import com.eomyoosang.chat.domain.user.entity.User;
 import com.eomyoosang.chat.domain.user.repository.UserRepository;
+import com.eomyoosang.chat.domain.user.exception.UserException;
+import com.eomyoosang.chat.domain.auth.exception.AuthException;
 import com.eomyoosang.chat.infrastructure.security.JwtTokenProvider;
 import com.eomyoosang.chat.presentation.auth.dto.AuthResponse;
 import com.eomyoosang.chat.presentation.auth.dto.LoginRequest;
@@ -37,15 +39,15 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new UserException.EmailAlreadyExistsException();
         }
 
         if (userRepository.existsByPhone(request.getPhone())) {
-            throw new RuntimeException("Phone number already exists");
+            throw new UserException.PhoneAlreadyExistsException();
         }
 
         if (userRepository.existsByNickname(request.getNickname())) {
-            throw new RuntimeException("Nickname already exists");
+            throw new UserException.NicknameAlreadyExistsException();
         }
 
         User user = new User(
@@ -73,7 +75,7 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -90,7 +92,7 @@ public class AuthService {
 
     public UserInfoResponse getUserInfo(String userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         return new UserInfoResponse(
                 user.getId(),
@@ -103,12 +105,12 @@ public class AuthService {
 
     public AuthResponse refreshToken(String refreshToken) {
         if (!tokenProvider.validateToken(refreshToken)) {
-            throw new RuntimeException("Invalid refresh token");
+            throw new AuthException.InvalidTokenException();
         }
 
         String userId = tokenProvider.getUserIdFromToken(refreshToken);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         // UserDetails를 직접 생성하고 Authentication 객체 만들기
         org.springframework.security.core.userdetails.UserDetails userDetails =
