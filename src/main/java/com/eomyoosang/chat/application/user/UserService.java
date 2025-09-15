@@ -1,6 +1,7 @@
 package com.eomyoosang.chat.application.user;
 
 import com.eomyoosang.chat.domain.user.entity.User;
+import com.eomyoosang.chat.domain.user.exception.UserException;
 import com.eomyoosang.chat.domain.user.repository.UserRepository;
 import com.eomyoosang.chat.presentation.user.dto.UserProfileDto;
 import com.eomyoosang.chat.presentation.user.dto.UpdateProfileRequest;
@@ -25,14 +26,14 @@ public class UserService {
 
     public UserProfileDto getUserProfile(String userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         return UserProfileDto.fromEntity(user);
     }
 
     public UserProfileDto getMyProfile(String userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         return UserProfileDto.fromEntityWithPrivateInfo(user);
     }
@@ -40,13 +41,13 @@ public class UserService {
     @Transactional
     public UserProfileDto updateProfile(String userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserException.UserNotFoundException());
 
         // 닉네임 중복 검증
         if (request.getNickname() != null &&
             !request.getNickname().equals(user.getNickname()) &&
             userRepository.existsByNickname(request.getNickname())) {
-            throw new RuntimeException("Nickname already exists");
+            throw new UserException.NicknameAlreadyExistsException();
         }
 
         // 프로필 업데이트
