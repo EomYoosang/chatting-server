@@ -16,6 +16,7 @@ public class RegisterRequest {
     @NotBlank
     private String nickname;
 
+    @NotBlank
     @Pattern(regexp = "^010-\\d{4}-\\d{4}$", message = "Phone number format should be 010-XXXX-XXXX")
     private String phone;
 
